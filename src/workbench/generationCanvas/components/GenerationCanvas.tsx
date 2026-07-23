@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from '../../../ui/toast'
 import { cn } from '../../../utils/cn'
 import CanvasToolbar, { NodeAddMenu } from './CanvasToolbar'
@@ -71,6 +72,7 @@ type GenerationCanvasProps = {
 }
 
 export default function GenerationCanvas({ readOnly = false }: GenerationCanvasProps): JSX.Element {
+  const { t } = useTranslation()
   const isReady = useGenerationCanvasStore((state) => state.isReady)
   const allNodes = useGenerationCanvasStore((state) => state.nodes)
   const allEdges = useGenerationCanvasStore((state) => state.edges)
@@ -226,7 +228,7 @@ export default function GenerationCanvas({ readOnly = false }: GenerationCanvasP
       if (!nodeId) return
       const target = allNodesRef.current.find((node) => node.id === nodeId)
       if (!target) {
-        toast('源节点已不存在', 'warning')
+        toast(t('generationCommon.node.sourceNoLongerExists'), 'warning')
         return
       }
       const targetCategoryId = target.categoryId || 'shots'
@@ -242,7 +244,7 @@ export default function GenerationCanvas({ readOnly = false }: GenerationCanvasP
         focusFlashTimerRef.current = null
       }
     }
-  }, [selectNode, setActiveCategoryId])
+  }, [selectNode, setActiveCategoryId, t])
 
   React.useEffect(() => {
     if (!pendingFocusNodeId) return
@@ -412,10 +414,15 @@ export default function GenerationCanvas({ readOnly = false }: GenerationCanvasP
         categoryId: activeCategoryId,
       })
       if (result.createdCount === 0) {
-        toast('没有可导入画布的素材', 'info')
+        toast(t('generationCommon.canvas.noImportableAssets'), 'info')
         return
       }
-      toast(result.createdCount === 1 ? '已导入画布' : `已导入 ${result.createdCount} 个素材到画布`, 'success')
+      toast(
+        result.createdCount === 1
+          ? t('generationCommon.canvas.importedOne')
+          : t('generationCommon.canvas.importedMany', { count: result.createdCount }),
+        'success',
+      )
     },
     [activeCategoryId, getToolbarInsertionPosition, readOnly],
   )
@@ -432,7 +439,7 @@ export default function GenerationCanvas({ readOnly = false }: GenerationCanvasP
       const assets = Array.isArray(payload?.assets) ? payload.assets as BrowserAssetCanvasImportItem[] : []
       handleBrowserAssetsImportToCanvas(assets)
     })
-  }, [handleBrowserAssetsImportToCanvas])
+  }, [handleBrowserAssetsImportToCanvas, t])
 
   const getPastePosition = React.useCallback(
     () => lastPastePositionRef.current ?? getToolbarInsertionPosition(),
@@ -606,7 +613,7 @@ export default function GenerationCanvas({ readOnly = false }: GenerationCanvasP
         'generation-canvas-v2',
         'grid grid-rows-[minmax(0,1fr)] w-full h-full min-w-0 min-h-0 bg-workbench-bg text-workbench-ink',
       )}
-      aria-label="AI 影像创作画布"
+      aria-label={t('generationCommon.canvas.aria')}
       data-ready={isReady ? 'true' : undefined}
       data-nomi-generation-canvas-import-target={!readOnly ? 'true' : undefined}
     >

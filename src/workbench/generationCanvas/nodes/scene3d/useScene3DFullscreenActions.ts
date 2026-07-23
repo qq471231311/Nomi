@@ -2,6 +2,7 @@
 // 自包含逻辑——剪贴板/键盘导航、轨迹模式动作包装、全局快捷键监听、添加对象/相机/群众——
 // 行为 100% 等价于原内联实现，仅做位置迁移（无并行版 P1）。
 import React from 'react'
+import i18n from '../../../../i18n'
 import { toast, useToastStore } from '../../../../ui/toast'
 import { useGenerationCanvasStore } from '../../store/generationCanvasStore'
 import {
@@ -37,7 +38,8 @@ import { makePropObject } from './scene3dPropSpecs'
 import { buildSceneTemplateObjects, SCENE_TEMPLATE_LABEL, type Scene3DSceneTemplate } from './scene3dSceneTemplates'
 
 // 对象上限文案单源（4 个加对象入口共用）；数字随 OBJECT_LIMIT derive，不各自硬编码。
-const OBJECT_LIMIT_MESSAGE = `场景满了（上限 ${OBJECT_LIMIT} 个对象）——删掉不用的再加新的`
+// 用函数取（不是模块级 const）——否则切换语言后旧值不更新。
+const objectLimitMessage = (): string => i18n.t('scene3d.fullscreen.sceneFull', { count: OBJECT_LIMIT })
 
 /** 「相机截图但没选相机」的一键跳转报错（顶栏截图与出片面板共用单源，P3-15） */
 export function toastPickCameraFirst(
@@ -46,13 +48,13 @@ export function toastPickCameraFirst(
 ): void {
   if (firstCamera) {
     useToastStore.getState().push({
-      message: '相机截图要先选中一个相机',
+      message: i18n.t('scene3d.fullscreen.selectCameraForScreenshot'),
       type: 'warning',
-      actionLabel: `点此选中「${firstCamera.name}」`,
+      actionLabel: i18n.t('scene3d.fullscreen.selectNamedCamera', { camera: firstCamera.name }),
       onAction: () => onPickCamera(firstCamera.id),
     })
   } else {
-    toast('先加个相机才能相机截图', 'warning')
+    toast(i18n.t('scene3d.fullscreen.addCameraForScreenshot'), 'warning')
   }
 }
 
@@ -140,7 +142,7 @@ export function useScene3DClipboardActions({
     if (clipboard.type === 'object') {
       const current = stateRef.current
       if (current.objects.length >= OBJECT_LIMIT) {
-        toast(OBJECT_LIMIT_MESSAGE, 'warning')
+        toast(objectLimitMessage(), 'warning')
         return true
       }
       const object = makePastedObject(clipboard.item, pasteCount)
@@ -273,7 +275,7 @@ export function useScene3DTrajectoryModeActions({
       binding.objects.some((boundObject) => boundObject.objectId === targetId)
     ))
     if (alreadyBound) {
-      toast('同一节点只能绑定一条轨迹', 'warning')
+      toast(i18n.t('scene3d.fullscreen.singleTrajectory'), 'warning')
       return
     }
     const pointIndex = pointId ? targetTrajectory.points.findIndex((point) => point.id === pointId) : -1
@@ -290,9 +292,9 @@ export function useScene3DTrajectoryModeActions({
     if (playing && !trajectory.hasPlayableBinding) {
       // P3-15：错误提示带一键跳转——点 toast 直接进轨迹面板去绑定
       useToastStore.getState().push({
-        message: '轨迹要先绑定对象或相机才能播放',
+        message: i18n.t('scene3d.trajectory.bindBeforePlay'),
         type: 'warning',
-        actionLabel: '去轨迹面板绑定',
+        actionLabel: i18n.t('scene3d.trajectory.goBindTarget'),
         onAction: () => enterTrajectoryMode(true),
       })
       return
@@ -414,7 +416,7 @@ export function useScene3DAddActions({
   const addProp = React.useCallback((kind: Scene3DPropKind) => {
     if (readOnly) return
     if (stateRef.current.objects.length >= OBJECT_LIMIT) {
-      toast(OBJECT_LIMIT_MESSAGE, 'warning')
+      toast(objectLimitMessage(), 'warning')
       return
     }
     const object = makePropObject(kind)
@@ -428,7 +430,7 @@ export function useScene3DAddActions({
   const addObject = React.useCallback((kind: Scene3DGeometry | 'mannequin' | 'light') => {
     if (readOnly) return
     if (stateRef.current.objects.length >= OBJECT_LIMIT) {
-      toast(OBJECT_LIMIT_MESSAGE, 'warning')
+      toast(objectLimitMessage(), 'warning')
       return
     }
     const roleIndex = kind === 'mannequin'
@@ -460,7 +462,7 @@ export function useScene3DAddActions({
   const addCrowd = React.useCallback((options: CrowdAddOptions) => {
     if (readOnly) return
     if (stateRef.current.objects.length >= OBJECT_LIMIT) {
-      toast(OBJECT_LIMIT_MESSAGE, 'warning')
+      toast(objectLimitMessage(), 'warning')
       return
     }
     const crowd = makeCrowdObject(options)
@@ -476,14 +478,14 @@ export function useScene3DAddActions({
     if (readOnly) return
     const additions = buildSceneTemplateObjects(template)
     if (stateRef.current.objects.length + additions.length > OBJECT_LIMIT) {
-      toast(`场景对象将超过 ${OBJECT_LIMIT} 个上限，请先清理再套模板`, 'warning')
+      toast(i18n.t('scene3d.fullscreen.templateLimit', { count: OBJECT_LIMIT }), 'warning')
       return
     }
     setState((current) => ({ ...current, objects: [...current.objects, ...additions] }))
     setSelection(null)
     exitTrajectoryMode()
     setViewLocked(false)
-    toast(`已搭好「${SCENE_TEMPLATE_LABEL[template]}」（追加 ${additions.length} 个物体，未动原有内容）`, 'success')
+    toast(i18n.t('scene3d.fullscreen.templateApplied', { template: SCENE_TEMPLATE_LABEL[template], count: additions.length }), 'success')
   }, [exitTrajectoryMode, readOnly, setSelection, setState, setViewLocked, stateRef])
 
   return { addObject, addProp, addCamera, addCrowd, applySceneTemplate }
@@ -555,7 +557,7 @@ export function useScene3DCameraMoveAction({
     setState(result.state)
     trajectory.setTimelineOpen(true)
     const duration = result.endTime - result.startTime
-    toast(`已追加「${CAMERA_MOVE_LABEL[spec.move]} · ${duration}s」到时间轴（${result.startTime}s-${result.endTime}s）`, 'success')
+    toast(i18n.t('scene3d.fullscreen.presetAppended', { move: CAMERA_MOVE_LABEL[spec.move], duration, start: result.startTime, end: result.endTime }), 'success')
   }, [readOnly, setState, stateRef, trajectory])
 }
 
@@ -563,10 +565,12 @@ export function useScene3DCameraMoveAction({
  * kind='screenshot'：截图即时完成——产物落在被编辑器盖住的画布上，没有这张卡用户会以为
  * 什么都没发生（2026-07-21 反馈「截了图没东西可拖」）。 */
 export type Scene3DExportCard = {
-  kind: 'video' | 'screenshot'
+  kind: 'video' | 'screenshot' | 'keyframes'
   phase: 'rendering' | 'slow' | 'done'
   /** video done 时：mp4 是否已自动喂给下游镜头（cameraMoveVideo.targetNodeId） */
   fedDownstream: boolean
+  /** keyframes：实际生成的张数（2=首尾全成 / 1=partial 仅一张）。 */
+  count?: number
 }
 
 // 出片动作（2026-07-20 出片旅程 → 2026-07-22 任务优先重构）：三个导出 handler、
@@ -611,21 +615,35 @@ export function useScene3DExportActions({
     if (screenshotTimerRef.current) window.clearTimeout(screenshotTimerRef.current)
     screenshotTimerRef.current = window.setTimeout(() => setScreenshotDone(false), 10_000)
   }, [])
+  // F2 首尾帧持久结果卡：文件+节点已建，但此前只有瞬时 toast——给持久卡（10s，两张都成才 done，
+  // 只成一张显示 partial 1/2），带「回画布查看」。count=0 = 全失败（不出成功卡）。
+  const [keyframesCount, setKeyframesCount] = React.useState(0)
+  const keyframesTimerRef = React.useRef<number | null>(null)
+  const markKeyframesExported = React.useCallback((count: number) => {
+    if (count <= 0) return
+    setKeyframesCount(count)
+    if (keyframesTimerRef.current) window.clearTimeout(keyframesTimerRef.current)
+    keyframesTimerRef.current = window.setTimeout(() => setKeyframesCount(0), 10_000)
+  }, [])
   React.useEffect(() => () => {
     if (screenshotTimerRef.current) window.clearTimeout(screenshotTimerRef.current)
+    if (keyframesTimerRef.current) window.clearTimeout(keyframesTimerRef.current)
   }, [])
 
   const exportCard: Scene3DExportCard | null = exportingTakeId
     ? takeVideo?.url
       ? { kind: 'video', phase: 'done', fedDownstream: Boolean(takeVideo.targetNodeId) }
       : { kind: 'video', phase: slowHint ? 'slow' : 'rendering', fedDownstream: false }
-    : screenshotDone
-      ? { kind: 'screenshot', phase: 'done', fedDownstream: false }
-      : null
+    : keyframesCount > 0
+      ? { kind: 'keyframes', phase: 'done', fedDownstream: false, count: keyframesCount }
+      : screenshotDone
+        ? { kind: 'screenshot', phase: 'done', fedDownstream: false }
+        : null
   const dismissExportCard = React.useCallback(() => {
     setExportingTakeId(null)
     setSlowHint(false)
     setScreenshotDone(false)
+    setKeyframesCount(0)
     if (exportingTimerRef.current) {
       window.clearTimeout(exportingTimerRef.current)
       exportingTimerRef.current = null
@@ -633,6 +651,10 @@ export function useScene3DExportActions({
     if (screenshotTimerRef.current) {
       window.clearTimeout(screenshotTimerRef.current)
       screenshotTimerRef.current = null
+    }
+    if (keyframesTimerRef.current) {
+      window.clearTimeout(keyframesTimerRef.current)
+      keyframesTimerRef.current = null
     }
   }, [])
 
@@ -647,7 +669,7 @@ export function useScene3DExportActions({
     if (ready && !wasReady && !readOnly) {
       if (journeyToastTimerRef.current) window.clearTimeout(journeyToastTimerRef.current)
       journeyToastTimerRef.current = window.setTimeout(() => {
-        toast('运镜就绪 → 点顶部「出片」按钮生成参考视频', 'success')
+        toast(i18n.t('scene3d.export.moveReady'), 'success')
         journeyToastTimerRef.current = null
       }, 500)
     }
@@ -669,11 +691,11 @@ export function useScene3DExportActions({
 
   const handleExportReferenceVideo = React.useCallback(() => {
     if (!onRecordTake) {
-      toast('当前环境不支持导出参考视频', 'warning')
+      toast(i18n.t('scene3d.export.referenceVideoUnsupported'), 'warning')
       return
     }
     if (!isCameraMoveReady(stateRef.current)) {
-      toast('先整运镜——选中相机后点运镜预设，或画轨迹绑定相机', 'warning')
+      toast(i18n.t('scene3d.export.cameraMoveRequired'), 'warning')
       return
     }
     // 用当前 state（含已有轨迹）触发 take 录制流程 → 宿主建节点 + CameraMoveCaptureHost 渲染 mp4。
@@ -701,7 +723,7 @@ export function useScene3DExportActions({
   const handleExportScreenshotCamera = React.useCallback(() => {
     if (!selectedCamera) {
       if (onPickCamera) toastPickCameraFirst(stateRef.current.cameras[0], onPickCamera)
-      else toast('请先选中一个拍摄相机', 'warning')
+      else toast(i18n.t('scene3d.fullscreen.selectCameraFirst'), 'warning')
       return
     }
     const captured = captureSelectedCamera()
@@ -715,5 +737,6 @@ export function useScene3DExportActions({
     handleExportScreenshotViewport,
     handleExportScreenshotCamera,
     trackTakeExport,
+    markKeyframesExported,
   }
 }

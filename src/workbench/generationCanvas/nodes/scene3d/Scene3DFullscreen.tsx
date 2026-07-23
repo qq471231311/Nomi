@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { IconListTree, IconSettings } from '@tabler/icons-react'
@@ -25,6 +26,7 @@ import {
   applyEditorCameraPose,
   vectorAlmostEqual,
 } from './scene3dMath'
+import { useScene3DCameraFraming } from './useScene3DCameraFraming'
 import { SceneObjectList } from './scene3dInspector'
 import { TrajectoryListPanel } from './scene3dTrajectoryListPanel'
 import { SceneContent } from './scene3dSceneContent'
@@ -83,6 +85,7 @@ export default function Scene3DFullscreen({
   onRecordTake,
   referenceTarget,
 }: Scene3DFullscreenProps): JSX.Element {
+  const { t } = useTranslation()
   const [state, setState] = React.useState(() => cloneScene3DState(initialState))
   const [selection, setSelection] = React.useState<Scene3DSelection>(null)
   // 首次进入的三步教练标注（方案 A，2026-07-11 拍板）；只出现一次，localStorage 记忆。
@@ -218,15 +221,9 @@ export default function Scene3DFullscreen({
     }))
   }, [])
 
-  const patchCamera = React.useCallback((id: string, patch: Partial<Scene3DCamera>) => {
-    setState((current) => ({
-      ...current,
-      cameras: current.cameras.map((camera) => (camera.id === id ? { ...camera, ...patch } : camera)),
-    }))
-  }, [])
+  const { patchCamera, handleCameraAspectChange } = useScene3DCameraFraming({ setState, stateRef })
 
   const applyCameraMove = useScene3DCameraMoveAction({ readOnly, stateRef, setState, trajectory })
-  const { exportCameraMoveFrames, moveFrameCapture } = useScene3DMoveFrameExport({ stateRef, onScreenshot })
 
   const deleteSceneItem = useScene3DDeleteAction({
     readOnly,
@@ -277,6 +274,7 @@ export default function Scene3DFullscreen({
     handleExportScreenshotViewport,
     handleExportScreenshotCamera,
     trackTakeExport,
+    markKeyframesExported,
   } = useScene3DExportActions({
     state,
     stateRef,
@@ -287,6 +285,8 @@ export default function Scene3DFullscreen({
     captureViewport,
     captureSelectedCamera,
   })
+  // 首尾帧离屏导出（F2：两张节点建好 → markKeyframesExported 弹持久结果卡）。放在 exportActions 后拿其回调。
+  const { exportCameraMoveFrames, moveFrameCapture } = useScene3DMoveFrameExport({ stateRef, onScreenshot, onKeyframesExported: markKeyframesExported })
 
   const updateEditorCamera = React.useCallback((editorCamera: Scene3DState['editorCamera']) => {
     latestEditorCameraRef.current = editorCamera
@@ -517,7 +517,7 @@ export default function Scene3DFullscreen({
       }}
       role="dialog"
       aria-modal="true"
-      aria-label="3D 场景编辑器"
+      aria-label={t('scene3d.fullscreen.editorAria')}
       tabIndex={0}
       onContextMenu={(event) => event.preventDefault()}
       onKeyDown={(event) => event.stopPropagation()}
@@ -583,7 +583,7 @@ export default function Scene3DFullscreen({
 
         <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[var(--nomi-ink-05)]">
           <FencedCanvas
-            fence={<div className="absolute inset-0 grid place-items-center text-caption text-[var(--nomi-ink-60)]">正在初始化 3D 视口…</div>}
+            fence={<div className="absolute inset-0 grid place-items-center text-caption text-[var(--nomi-ink-60)]">{t('scene3d.fullscreen.initializing')}</div>}
             camera={canvasCamera}
             dpr={[1, 2]}
             frameloop={trajectory.isPlaying || takeRecorder.isRecording ? 'always' : 'demand'}
@@ -659,12 +659,12 @@ export default function Scene3DFullscreen({
             />
           </FencedCanvas>
           {!leftPanelOpen ? (
-            <CanvasPanelRestoreButton side="left" title="显示场景节点" onClick={() => setLeftPanelOpen(true)}>
+            <CanvasPanelRestoreButton side="left" title={t('scene3d.fullscreen.showSceneNodes')} onClick={() => setLeftPanelOpen(true)}>
               <IconListTree size={18} />
             </CanvasPanelRestoreButton>
           ) : null}
           {!rightPanelOpen ? (
-            <CanvasPanelRestoreButton side="right" title="显示属性" onClick={() => setRightPanelOpen(true)}>
+            <CanvasPanelRestoreButton side="right" title={t('scene3d.fullscreen.showProperties')} onClick={() => setRightPanelOpen(true)}>
               <IconSettings size={18} />
             </CanvasPanelRestoreButton>
           ) : null}
@@ -682,7 +682,7 @@ export default function Scene3DFullscreen({
               readOnly={readOnly}
               cameraViewEditing={cameraViewEditId === selectedCamera.id}
               rightPanelCollapsed={!rightPanelOpen}
-              onAspectChange={(aspectRatio) => patchCamera(selectedCamera.id, { aspectRatio })}
+              onAspectChange={(aspectRatio) => handleCameraAspectChange(selectedCamera, aspectRatio)}
               onFovChange={(fov) => patchCamera(selectedCamera.id, { fov })}
               onLensDepthChange={(lensDepth) => patchCamera(selectedCamera.id, { lensDepth })}
               onShakeAmplitudeChange={(shakeAmplitude) => patchCamera(selectedCamera.id, { shakeAmplitude })}

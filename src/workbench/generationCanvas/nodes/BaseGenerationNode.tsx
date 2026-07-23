@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { IconCheck, IconCopy, IconDownload, IconMaximize, IconUpload } from '@tabler/icons-react'
 import ProvenancePanel from './ProvenancePanel'
 import { ShotPreviewOverlays } from './ConvertShotToVideoButton'
@@ -87,6 +88,7 @@ function BaseGenerationNodeImpl({
   focusFlash = false,
   appear = false,
 }: BaseGenerationNodeProps): JSX.Element {
+  const { t } = useTranslation()
   const selectNode = useGenerationCanvasStore((state) => state.selectNode)
   const captureHistory = useGenerationCanvasStore((state) => state.captureHistory)
   const commitPersistedChange = useGenerationCanvasStore((state) => state.commitPersistedChange)
@@ -152,7 +154,7 @@ function BaseGenerationNodeImpl({
       startFrame,
     })
     if (!clip) {
-      toast('该节点还没生成画面，先点「生成」', 'info')
+      toast(t('generationCommon.node.generateFirst'), 'info')
       return
     }
     useWorkbenchStore.getState().addTimelineClipAtFrame(clip, getTrackTypeForClipType(clip.type), startFrame)
@@ -337,7 +339,11 @@ function BaseGenerationNodeImpl({
                 'opacity-80 transition-opacity duration-150 hover:opacity-100',
                 'data-[active=true]:opacity-100',
               )}
-              aria-label={isPendingConnectionTarget ? '连接到此节点' : '从此节点开始连线'}
+              aria-label={
+                isPendingConnectionTarget
+                  ? t('generationCommon.node.connectHere')
+                  : t('generationCommon.node.startConnection')
+              }
               data-active={isPendingConnectionTarget ? 'true' : 'false'}
               onPointerDown={(event) => {
                 if (isPendingConnectionTarget) {
@@ -362,7 +368,7 @@ function BaseGenerationNodeImpl({
                 'opacity-80 transition-opacity duration-150 hover:opacity-100',
                 'data-[active=true]:opacity-100',
               )}
-              aria-label="从此节点开始连线"
+              aria-label={t('generationCommon.node.startConnection')}
               data-active={isPendingConnectionSource ? 'true' : 'false'}
               onPointerDown={(event) => handleConnectionDragStart(event, 'right')}
             >
@@ -373,25 +379,25 @@ function BaseGenerationNodeImpl({
       ) : null}
 
       {node.kind === 'panorama' && selected && !isMultiSelectActive && !readOnly && node.result?.url ? (
-        <FloatingToolbarShell ariaLabel="全景图操作">
+        <FloatingToolbarShell ariaLabel={t('generationCommon.node.panoramaActions')}>
           <ToolbarButton
             icon={<IconMaximize size={TBI.size} stroke={TBI.stroke} />}
-            label="全景预览"
-            title="全景预览"
+            label={t('generationCommon.node.panoramaPreview')}
+            title={t('generationCommon.node.panoramaPreview')}
             onClick={() => panoramaFullscreenRef.current?.()}
           />
           <ToolbarDivider />
           <ToolbarButton
             icon={<IconUpload size={TBI.size} stroke={TBI.stroke} />}
-            label="重新上传"
-            title="重新上传全景图"
+            label={t('generationCommon.node.reupload')}
+            title={t('generationCommon.node.reuploadPanorama')}
             onClick={() => panoramaUploadInputRef.current?.click()}
           />
           <ToolbarDivider />
           <ToolbarButton
             icon={<IconDownload size={TBI.size} stroke={TBI.stroke} />}
-            label="下载"
-            title="下载 / 另存到本地"
+            label={t('generationCommon.resultDownload.download')}
+            title={t('generationCommon.resultDownload.downloadHint')}
             disabled={panoramaDownloading}
             onClick={downloadPanorama}
           />
@@ -456,14 +462,18 @@ function BaseGenerationNodeImpl({
           <button
             type="button"
             className="generation-canvas-v2-node__derived-badge"
-            aria-label={sourceNodeExists ? `定位源节点：${sourceNodeLabel}` : '源节点已不存在'}
+            aria-label={
+              sourceNodeExists
+                ? t('generationCommon.node.locateSource', { source: sourceNodeLabel })
+                : t('generationCommon.node.sourceNoLongerExists')
+            }
             title={independentCopyLabel}
             disabled={!sourceNodeExists}
             onClick={handleFocusSourceNode}
             onPointerDown={(event) => event.stopPropagation()}
           >
             <IconCopy size={13} stroke={1.8} aria-hidden="true" />
-            <span>独立副本</span>
+            <span>{t('generationCommon.node.independentCopy')}</span>
           </button>
         ) : null}
         {hasResult && !imageStackOpen ? (
@@ -655,7 +665,7 @@ function BaseGenerationNodeImpl({
           )}
         >
           <IconCheck size={13} stroke={2.2} />
-          主图
+          {t('generationCommon.node.primaryImage')}
         </span>
       ) : null}
 
@@ -708,8 +718,8 @@ function BaseGenerationNodeImpl({
                 direction === 'se' && 'right-[-8px] bottom-[-8px]',
                 direction === 'sw' && 'bottom-[-8px] left-[-8px]',
               )}
-              aria-label={`从${direction}方向调整节点尺寸`}
-              title="调整节点尺寸"
+              aria-label={t('generationCommon.node.resizeAria', { direction })}
+              title={t('generationCommon.node.resize')}
               onPointerDown={handleResizePointerDown(direction)}
             />
           ))
