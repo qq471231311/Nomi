@@ -55,6 +55,11 @@ export type ImageUrlSlot = {
   group: ImageUrlGroup
 }
 
+export type FrameSlotLabels = {
+  firstFrame: string
+  lastFrame: string
+}
+
 const FIRST_FRAME_KEY_FRAGMENTS = ['firstframe', 'firstimage', 'startframe', 'startimage', 'initialframe']
 const LAST_FRAME_KEY_FRAGMENTS = ['lastframe', 'lastimage', 'endframe', 'endimage', 'finalframe']
 
@@ -105,6 +110,27 @@ export function buildImageUrlSlots(meta: unknown): ImageUrlSlot[] {
   return controls
     .filter(looksLikeImageUrlControl)
     .map((c) => ({ key: c.key, label: c.label, group: inferImageUrlGroup(c.key) }))
+}
+
+function readComfyWorkflowBinding(meta: unknown): Record<string, unknown> | null {
+  if (!meta || typeof meta !== 'object') return null
+  const draft = (meta as Record<string, unknown>).comfyWorkflowImport
+  if (!draft || typeof draft !== 'object') return null
+  const binding = (draft as Record<string, unknown>).binding
+  return binding && typeof binding === 'object' ? binding as Record<string, unknown> : null
+}
+
+export function buildComfyWorkflowImageUrlSlots(meta: unknown, labels: FrameSlotLabels): ImageUrlSlot[] | null {
+  const binding = readComfyWorkflowBinding(meta)
+  if (!binding) return null
+  const slots: ImageUrlSlot[] = []
+  if (typeof binding.firstFrameNodeId === 'string' && typeof binding.firstFrameInputKey === 'string') {
+    slots.push({ key: 'firstFrameUrl', label: labels.firstFrame, group: 'first_frame' })
+  }
+  if (typeof binding.lastFrameNodeId === 'string' && typeof binding.lastFrameInputKey === 'string') {
+    slots.push({ key: 'lastFrameUrl', label: labels.lastFrame, group: 'last_frame' })
+  }
+  return slots
 }
 
 export function imageCatalogReferenceSlot(config: ImageModelCatalogConfig | null): ImageUrlSlot[] {

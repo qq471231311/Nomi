@@ -208,6 +208,36 @@ describe('buildCatalogTaskRequest — ComfyUI 自定义模型不吃旧档案 arc
     expect(built.request.extras?.archetypeInput).toBeUndefined()
   })
 
+  it('只绑定首帧的 Comfy i2v 即便残留 Dreamina archetype，也走 flat firstFrameUrl', () => {
+    const node: GenerationCanvasNode = {
+      id: 'comfy-i2v',
+      kind: 'video',
+      title: '',
+      position: { x: 0, y: 0 },
+      prompt: '一杯咖啡',
+      meta: {
+        modelKey: 'comfy-wan2-2-5b-t2v-mrvi3py1',
+        modelVendor: 'comfyui-local',
+        vendor: 'comfyui-local',
+        archetype: { id: 'dreamina-seedance-2', modeId: 'multimodal', variantId: 'fast' },
+        comfy_width: 1280,
+        comfy_height: 704,
+        comfy_length: 121,
+        comfy_fps: 24,
+        comfy_batch_size: 1,
+      },
+    }
+    const built = buildCatalogTaskRequest(node, {
+      references: { firstFrameUrl: 'nomi-local://asset/first.png' },
+    })
+
+    expect(built.vendor).toBe('comfyui-local')
+    expect(built.request.kind).toBe('image_to_video')
+    expect(built.request.extras?.firstFrameUrl).toBe('nomi-local://asset/first.png')
+    expect(built.request.extras?.lastFrameUrl).toBeUndefined()
+    expect(built.request.extras?.archetypeInput).toBeUndefined()
+  })
+
   it('内置 comfyui-txt2img 这类非 comfy- 前缀本地模型也不吃旧 archetype', () => {
     const node: GenerationCanvasNode = {
       id: 'comfy-t2i',

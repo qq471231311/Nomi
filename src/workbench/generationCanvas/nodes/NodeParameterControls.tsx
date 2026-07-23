@@ -22,6 +22,7 @@ import {
   type ImageUrlSlot,
   assetUrl,
   buildEffectiveImageCatalogConfig,
+  buildComfyWorkflowImageUrlSlots,
   buildImageUrlSlots,
   buildModelControls,
   defaultPatchForCatalogControl,
@@ -432,9 +433,13 @@ export default function NodeParameterControls({
     }
   }
 
+  const comfyImageUrlSlots = buildComfyWorkflowImageUrlSlots(selectedModelOption?.meta, {
+    firstFrame: t('generationCommon.parameters.firstFrame'),
+    lastFrame: t('generationCommon.parameters.lastFrame'),
+  })
   const modelImageUrlSlots = [
-    ...buildImageUrlSlots(selectedModelOption?.meta),
-    ...imageCatalogReferenceSlot(imageCatalogConfig),
+    ...(comfyImageUrlSlots ?? buildImageUrlSlots(selectedModelOption?.meta)),
+    ...(comfyImageUrlSlots ? [] : imageCatalogReferenceSlot(imageCatalogConfig)),
   ].filter(
     (slot, index, slots) => slots.findIndex((item) => item.key === slot.key && item.group === slot.group) === index,
   )
@@ -442,7 +447,7 @@ export default function NodeParameterControls({
   // 认不出 → 现有启发式槽 + 视频模型 首/尾帧 兜底。
   const imageUrlSlots: ImageUrlSlot[] = archMode
     ? archetypeModeSlots(archMode)
-    : isVideoLike && modelImageUrlSlots.length === 0
+    : !comfyImageUrlSlots && isVideoLike && modelImageUrlSlots.length === 0
       ? [
           { key: 'firstFrameUrl', label: t('generationCommon.parameters.firstFrame'), group: 'first_frame' },
           { key: 'lastFrameUrl', label: t('generationCommon.parameters.lastFrame'), group: 'last_frame' },
