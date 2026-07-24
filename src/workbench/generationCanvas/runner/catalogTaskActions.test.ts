@@ -175,7 +175,7 @@ describe('buildCatalogTaskRequest — 档案 mapping 桶由 transportTaskKind �
   })
 })
 
-describe('buildCatalogTaskRequest — ComfyUI 自定义模型不吃旧档案 archetype', () => {
+describe('buildCatalogTaskRequest — ComfyUI 本地 workflow 不吃旧档案 archetype', () => {
   it('本地 Comfy 首尾帧工作流即便残留 Dreamina archetype，也走 flat 首尾帧参数', () => {
     const node: GenerationCanvasNode = {
       id: 'comfy-v1',
