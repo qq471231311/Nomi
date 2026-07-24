@@ -133,6 +133,19 @@ export function buildComfyWorkflowImageUrlSlots(meta: unknown, labels: FrameSlot
   return slots
 }
 
+export function shouldUseVideoFrameSlotFallback(input: {
+  isVideoLike: boolean
+  modelImageUrlSlots: readonly ImageUrlSlot[]
+  comfyImageUrlSlots: ImageUrlSlot[] | null
+  vendor?: string | null
+}): boolean {
+  if (!input.isVideoLike || input.modelImageUrlSlots.length > 0) return false
+  // ComfyUI imported workflows are graph-defined. If their saved binding is absent
+  // or says no frame inputs, guessing first+last-frame creates invalid requests.
+  if (String(input.vendor || '').trim() === 'comfyui-local') return false
+  return !input.comfyImageUrlSlots
+}
+
 export function imageCatalogReferenceSlot(config: ImageModelCatalogConfig | null): ImageUrlSlot[] {
   return config?.supportsReferenceImages
     ? [{ key: 'referenceImageUrl', label: '参考图', group: 'reference' }]

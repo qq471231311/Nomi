@@ -37,6 +37,7 @@ import {
   readMeta,
   removePreviousControlParams,
   resultPreviewUrl,
+  shouldUseVideoFrameSlotFallback,
 } from './controls/parameterControlModel'
 import {
   type ArchetypeArraySlot,
@@ -447,7 +448,12 @@ export default function NodeParameterControls({
   // 认不出 → 现有启发式槽 + 视频模型 首/尾帧 兜底。
   const imageUrlSlots: ImageUrlSlot[] = archMode
     ? archetypeModeSlots(archMode)
-    : !comfyImageUrlSlots && isVideoLike && modelImageUrlSlots.length === 0
+    : shouldUseVideoFrameSlotFallback({
+        isVideoLike,
+        modelImageUrlSlots,
+        comfyImageUrlSlots,
+        vendor: selectedModelOption?.vendor,
+      })
       ? [
           { key: 'firstFrameUrl', label: t('generationCommon.parameters.firstFrame'), group: 'first_frame' },
           { key: 'lastFrameUrl', label: t('generationCommon.parameters.lastFrame'), group: 'last_frame' },

@@ -3,6 +3,7 @@ import type { ModelParameterControl } from '../../../../config/modelCatalogMeta'
 import {
   buildComfyWorkflowImageUrlSlots,
   parseControlInput,
+  shouldUseVideoFrameSlotFallback,
   videoAspectDefaultPatch,
   type DynamicModelControl,
 } from './parameterControlModel'
@@ -112,5 +113,34 @@ describe('buildComfyWorkflowImageUrlSlots — 按导入 binding 显示 Comfy 图
 
   it('非 Comfy 导入模型 → 返回 null，调用方继续走通用参数解析和视频兜底', () => {
     expect(buildComfyWorkflowImageUrlSlots({ parameters: [] }, labels)).toBeNull()
+  })
+})
+
+describe('shouldUseVideoFrameSlotFallback — 未识别视频模型兜底不套到 ComfyUI', () => {
+  it('普通未知视频模型 → 兜底显示首尾帧槽', () => {
+    expect(shouldUseVideoFrameSlotFallback({
+      isVideoLike: true,
+      modelImageUrlSlots: [],
+      comfyImageUrlSlots: null,
+      vendor: 'custom-relay',
+    })).toBe(true)
+  })
+
+  it('ComfyUI 视频 workflow 缺 binding → 不凭空补尾帧', () => {
+    expect(shouldUseVideoFrameSlotFallback({
+      isVideoLike: true,
+      modelImageUrlSlots: [],
+      comfyImageUrlSlots: null,
+      vendor: 'comfyui-local',
+    })).toBe(false)
+  })
+
+  it('ComfyUI 文生视频 binding 明确无帧槽 → 不兜底首尾帧', () => {
+    expect(shouldUseVideoFrameSlotFallback({
+      isVideoLike: true,
+      modelImageUrlSlots: [],
+      comfyImageUrlSlots: [],
+      vendor: 'comfyui-local',
+    })).toBe(false)
   })
 })
